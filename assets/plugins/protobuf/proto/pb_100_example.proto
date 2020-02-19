@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+// example,file name can be pb_*.proto
+
+// heart beat
+message c10000 {// a client message
+}
+message s10000 {// a server message
+    uint32 time = 1;
+}
+

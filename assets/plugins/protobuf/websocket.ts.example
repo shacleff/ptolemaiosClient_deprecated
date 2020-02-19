@@ -1,0 +1,62 @@
+import * as pb_warp from "../../plugins/protobuf/create/pb_warp"
+import Pb from "../../plugins/protobuf/create/pb"
+import EventCenter from "../EventCenter";
+
+const { ccclass, property } = cc._decorator;
+
+@ccclass
+export default class Network extends cc.Component {
+    static _ws: WebSocket = null;
+    static _isReconnect: boolean = false;
+
+    public static connect() {
+        if (Network._ws != null) {
+            return
+        }
+        var ws = new WebSocket("ws://127.0.0.1:8080/exia");
+        Network._ws = ws;
+
+        ws.onopen = function (event) {
+            if (Network._isReconnect) {
+                EventCenter.emit("net_reconnect", null);
+            } else {
+                Network._isReconnect = true;
+                EventCenter.emit("net_connect", null);
+            }
+        };
+        ws.onmessage = function (event) {
+            var warpReader = new FileReader();
+            warpReader.onload = function (e) {
+                let buf = new Uint8Array(warpReader.result);
+                let warp = pb_warp.warp.decode(buf);
+                let decodeClass = Pb.getDecode(warp.proto);
+                let msg = decodeClass.decode(warp.data);
+                EventCenter.emit("s" + warp.proto, msg);
+            }
+            warpReader.readAsArrayBuffer(event.data);
+        };
+        ws.onerror = function (event) {
+            console.log("WebSocket error ", event);
+        };
+        ws.onclose = function (event) {
+            Network._ws = null;
+            EventCenter.emit("net_disconnect", null);
+        };
+    }
+
+    public static send(pbInstance) {
+        if (this.isReady()) {
+            // c[1-9][0-9]*
+            var pbClass = pbInstance.constructor;
+            var proto = parseInt(pbClass.name.substr(1));
+            var data = pb_warp.warp.encode(pb_warp.warp.create({
+                proto: proto,
+                data: pbClass.encode(pbInstance).finish()
+            })).finish();
+            Network._ws.send(data);
+        } else {
+            console.log("WebSocket disconnect ", pbInstance)
+        }
+    }
+
+}

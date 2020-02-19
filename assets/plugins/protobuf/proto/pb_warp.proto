@@ -1,0 +1,12 @@
+syntax = "proto3";
+// warp other *.proto
+// *.proto specs
+// proto name pb_*
+// server message s[1-9][0-9]*
+// client message c[1-9][0-9]*
+// [1-9][0-9]* < 2^32
+// so you should never use (s|c)[1-9][0-9]* as field name!!
+message warp {
+    uint32 proto = 1;
+    bytes data = 2;
+}
